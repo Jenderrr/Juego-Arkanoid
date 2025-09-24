@@ -48,7 +48,7 @@ public class Game extends Canvas implements Runnable {
     }
     
     private void crearBloquesParaNivel(int nivel) {
-        int filas = 4 + nivel;
+        int filas = 2 + (nivel - 1); // Primer nivel: 2 filas
         int columnas = 10;
         int bloqueWidth = 70;
         int bloqueHeight = 25;
@@ -59,17 +59,74 @@ public class Game extends Canvas implements Runnable {
         
         for (int fila = 0; fila < filas; fila++) {
             for (int col = 0; col < columnas; col++) {
+                if (!debeTenerBloque(nivel, fila, col, filas, columnas)) {
+                    continue;
+                }
+                
                 int x = col * (bloqueWidth + espacio) + espacio;
                 int y = fila * (bloqueHeight + espacio) + margenSuperior;
                 
-                int tipo = 0;
-                if (fila == 0 && col % 3 == 0) tipo = 1;
-                if (fila == 2 && col % 4 == 0) tipo = 2;
+                int tipo = determinarTipo(nivel, fila, col);
+                int resistencia = determinarResistencia(nivel, fila, col);
                 
                 Color color = colores[(fila + nivel) % colores.length];
-                bloques.add(new Bloque(x, y, bloqueWidth, bloqueHeight, color, tipo));
+                Bloque bloque = new Bloque(x, y, bloqueWidth, bloqueHeight, color, tipo);
+                bloque.setResistencia(resistencia);
+                bloques.add(bloque);
             }
         }
+    }
+    
+    private boolean debeTenerBloque(int nivel, int fila, int col, int totalFilas, int totalColumnas) {
+        // Crear diferentes patrones según el nivel
+        switch (nivel % 5) { // Ciclo de patrones cada 5 niveles
+            case 1: // Patrón: columnas alternas
+                return col % 2 == fila % 2;
+                
+            case 2: // Patrón: marco exterior
+                return fila == 0 || fila == totalFilas - 1 || 
+                       col == 0 || col == totalColumnas - 1;
+                
+            case 3: // Patrón: pirámide
+                int centro = totalColumnas / 2;
+                int distancia = Math.abs(col - centro);
+                return distancia <= fila && fila < totalFilas / 2 + 1;
+                
+            case 4: // Patrón: rombo
+                int centroFila = totalFilas / 2;
+                int centroCol = totalColumnas / 2;
+                int distFila = Math.abs(fila - centroFila);
+                int distCol = Math.abs(col - centroCol);
+                return distFila + distCol <= Math.min(centroFila, centroCol) + 1;
+                
+            case 0: // Patrón: ajedrez
+                return (fila + col) % 2 == 0;
+                
+            default:
+                return true;
+        }
+    }
+    
+    private int determinarTipo(int nivel, int fila, int col) {
+        // Bloques especiales basados en posición y nivel
+        if (fila == 0 && col % 3 == 0) return 1; // Bloques resistentes
+        if (fila == Math.min(2, nivel) && col % 4 == 0) return 2; // Bloques de puntos extra
+        return 0; // Bloque normal
+    }
+    
+    private int determinarResistencia(int nivel, int fila, int col) {
+        int resistenciaBase = 1;
+        
+        // Aumentar resistencia según nivel
+        if (nivel >= 3) resistenciaBase++;
+        if (nivel >= 6) resistenciaBase++;
+        if (nivel >= 9) resistenciaBase++;
+        
+        // Bloques en posiciones estratégicas son más resistentes
+        if (fila == 0) resistenciaBase++; // Primera fila más resistente
+        if (col % 2 == 0) resistenciaBase++; // Columnas pares más resistentes
+        
+        return Math.min(resistenciaBase, 5); // Máximo 5 de resistencia
     }
     
     public void run() {
